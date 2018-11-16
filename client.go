@@ -23,7 +23,6 @@ type Message struct {
 	CC          []string
 	Title       string
 	Body        string
-	ID          string
 }
 
 type Attachment struct {
@@ -41,9 +40,9 @@ type Config struct {
 var ErrClosed = errors.New("connection has been closed")
 
 // New email return email handler struct
-func NewClient(impl Implementation, emailConfig Config) (Client, error) {
+func NewClient(impl Implementation, emailConfig *Config) (Client, error) {
 	if Gomail == impl {
-		return newGomail(&emailConfig), nil
+		return newGomail(emailConfig), nil
 	}
 
 	return nil, errors.New("no email implementations found")
