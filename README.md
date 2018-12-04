@@ -23,4 +23,5 @@ err := c.Send(&gomailer.Message{
 })
 ```
 
-## Pre-launch contributor
+## Offline Contributors
+[erosaru](https://github.com/erosaru)
