@@ -1,0 +1,8 @@
+# dep vendor
+vendor/
+
+# IDEs
+.idea
+
+# etc files
+.DS_Store
