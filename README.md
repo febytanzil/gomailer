@@ -2,9 +2,10 @@
 wrapper golang email with automatic reconnection
 
 ## Intentions & Features
-- based on https://gopkg.in/gomail.v2
+- Based on https://gopkg.in/gomail.v2
 - Auto reconnection broken pipe from SMTP server
 - Avoid too many login attempts because of redial & close
+- Unit-testable/ mock-able with gomock provided
 
 ## Usage
 Example is provided in `example/` folder/ package
