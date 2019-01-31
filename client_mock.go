@@ -5,6 +5,7 @@
 package gomailer
 
 import (
+	context "context"
 	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
 )
@@ -44,14 +45,26 @@ func (mr *MockClientMockRecorder) Send(msg interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Send", reflect.TypeOf((*MockClient)(nil).Send), msg)
 }
 
-// disconnect mocks base method
-func (m *MockClient) Close() error {
-	ret := m.ctrl.Call(m, "disconnect")
+// SendContext mocks base method
+func (m *MockClient) SendContext(ctx context.Context, msg *Message) error {
+	ret := m.ctrl.Call(m, "SendContext", ctx, msg)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// disconnect indicates an expected call of disconnect
+// SendContext indicates an expected call of SendContext
+func (mr *MockClientMockRecorder) SendContext(ctx, msg interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendContext", reflect.TypeOf((*MockClient)(nil).SendContext), ctx, msg)
+}
+
+// Close mocks base method
+func (m *MockClient) Close() error {
+	ret := m.ctrl.Call(m, "Close")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Close indicates an expected call of Close
 func (mr *MockClientMockRecorder) Close() *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "disconnect", reflect.TypeOf((*MockClient)(nil).Close))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockClient)(nil).Close))
 }

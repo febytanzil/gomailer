@@ -1,6 +1,7 @@
 package gomailer
 
 import (
+	"context"
 	"errors"
 )
 
@@ -13,6 +14,8 @@ const (
 type Client interface {
 	// Send will send email
 	Send(msg *Message) error
+	// SendContext provide context to send function
+	SendContext(ctx context.Context, msg *Message) error
 	// Close permanently close client connection
 	Close() error
 }

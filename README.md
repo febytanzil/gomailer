@@ -6,6 +6,7 @@ wrapper golang email with automatic reconnection
 - Auto reconnection broken pipe from SMTP server
 - Avoid too many login attempts because of redial & close
 - Unit-testable/ mock-able with gomock provided
+- Support Golang context
 
 ## Usage
 Example is provided in `example/` folder/ package
