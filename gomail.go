@@ -1,8 +1,10 @@
 package gomailer
 
 import (
+	"context"
 	"gopkg.in/gomail.v2"
 	"io"
+	"log"
 	"sync"
 	"sync/atomic"
 )
@@ -18,6 +20,7 @@ type goMail struct {
 
 type poolMessage struct {
 	future chan futureError
+	done   <-chan struct{}
 	msg    *Message
 }
 
@@ -38,21 +41,50 @@ func newGomail(emailConfig *Config) *goMail {
 	}
 }
 
-func (h *goMail) Send(msg *Message) error {
-	ftr := make(chan futureError)
-	defer close(ftr)
-
-	m := &poolMessage{
-		future: ftr,
-		msg:    msg,
-	}
-	err := h.sendToPool(m)
+func (h *goMail) SendContext(ctx context.Context, msg *Message) error {
+	ftr, err := h.send(ctx, msg)
 	if nil != err {
 		return err
 	}
-	f := <-ftr
 
-	return f.err
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case result := <-ftr:
+		return result.err
+	}
+}
+
+func (h *goMail) Send(msg *Message) error {
+	ftr, err := h.send(context.Background(), msg)
+	if nil != err {
+		return err
+	}
+
+	result := <-ftr
+
+	return result.err
+}
+
+func (h *goMail) send(ctx context.Context, msg *Message) (chan futureError, error) {
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+		ftr := make(chan futureError)
+
+		m := &poolMessage{
+			future: ftr,
+			msg:    msg,
+			done:   ctx.Done(),
+		}
+		err := h.sendToPool(ctx, m)
+		if nil != err {
+			return nil, err
+		}
+
+		return ftr, nil
+	}
 }
 
 func (h *goMail) disconnect() error {
@@ -86,34 +118,45 @@ func (h *goMail) Close() error {
 
 func (h *goMail) listen() {
 	for task := range h.messagePool {
-		msg := task.msg
-		m := gomail.NewMessage()
-		m.SetHeader("From", h.config.Email)
-		m.SetHeader("To", msg.SendTo...)
-		if len(msg.CC) > 0 {
-			m.SetHeader("Cc", msg.CC...)
-		}
-		m.SetHeader("Subject", msg.Title)
-		m.SetBody("text/html", msg.Body)
-
-		for _, element := range msg.Attachments {
-			fileByte := element.Byte
-			m.Attach(element.Filename, gomail.SetCopyFunc(func(w io.Writer) error {
-				_, err := w.Write(fileByte)
-				return err
-			}))
-		}
-
-		err := gomail.Send(h.sender, m)
-		if err != nil {
-			h.disconnect()
-		}
-
-		go func(e error, task *poolMessage) {
-			task.future <- futureError{
-				err: e,
+		select {
+		case <-task.done:
+			close(task.future)
+		default:
+			msg := task.msg
+			m := gomail.NewMessage()
+			m.SetHeader("From", h.config.Email)
+			m.SetHeader("To", msg.SendTo...)
+			if len(msg.CC) > 0 {
+				m.SetHeader("Cc", msg.CC...)
 			}
-		}(err, task)
+			m.SetHeader("Subject", msg.Title)
+			m.SetBody("text/html", msg.Body)
+
+			for _, element := range msg.Attachments {
+				fileByte := element.Byte
+				m.Attach(element.Filename, gomail.SetCopyFunc(func(w io.Writer) error {
+					_, err := w.Write(fileByte)
+					return err
+				}))
+			}
+
+			err := gomail.Send(h.sender, m)
+			if err != nil {
+				h.disconnect()
+			}
+
+			go func(e error, task *poolMessage) {
+				select {
+				case <-task.done:
+					log.Println("worker finished but task context was done with err", e)
+				default:
+					task.future <- futureError{
+						err: e,
+					}
+				}
+				close(task.future)
+			}(err, task)
+		}
 	}
 }
 
@@ -141,16 +184,22 @@ func (h *goMail) connect() error {
 	return nil
 }
 
-func (h *goMail) sendToPool(task *poolMessage) error {
+func (h *goMail) sendToPool(ctx context.Context, task *poolMessage) error {
 	if stateConnected != atomic.LoadInt32(&h.isConnected) {
 		if err := h.connect(); nil != err {
 			return err
 		}
 	}
 
-	go func() {
-		h.messagePool <- task
-	}()
+	go func(ctx context.Context) {
+		select {
+		case <-ctx.Done():
+			close(task.future)
+			return
+		default:
+			h.messagePool <- task
+		}
+	}(ctx)
 
 	return nil
 }

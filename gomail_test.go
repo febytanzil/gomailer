@@ -1,6 +1,7 @@
 package gomailer
 
 import (
+	"context"
 	"fmt"
 	"gopkg.in/gomail.v2"
 	"io"
@@ -57,5 +58,25 @@ func TestGoMail_Close(t *testing.T) {
 	err := c.Close()
 	if nil != err {
 		t.Error("err should be nil, but got", err)
+	}
+}
+
+func TestGoMail_SendContext(t *testing.T) {
+	c := &goMail{
+		sender: &gomailSenderMock{},
+		config: &Config{
+			Host:     "",
+			Port:     587,
+			Email:    "",
+			Password: "",
+		},
+	}
+	err := c.SendContext(context.Background(), &Message{
+		Body:   "body",
+		SendTo: []string{"test1@mail.com", "test2@mail.com"},
+		Title:  "title",
+	})
+	if nil == err {
+		t.Error("err should not be nil")
 	}
 }
