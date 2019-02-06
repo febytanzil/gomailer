@@ -12,7 +12,4 @@ before_install:
 - ./dep ensure -v
 
 script:
-- go test -race -coverprofile=coverage.txt -covermode=atomic ./...
-
-after_success:
-- bash <(curl -s https://codecov.io/bash) -t 9b203862-16a1-4e50-8cb6-c2bbb0fd0d92
+- go test -race ./...
