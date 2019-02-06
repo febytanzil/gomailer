@@ -1,3 +1,4 @@
+[![Build Status](https://travis-ci.com/febytanzil/gomailer.svg?branch=master)](https://travis-ci.com/febytanzil/gomailer)
 # gomailer
 wrapper golang email with automatic reconnection
 

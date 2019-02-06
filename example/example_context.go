@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func main() {
+func main_ctx() {
 	c, _ := gomailer.NewClient(gomailer.Gomail, &gomailer.Config{
 		Port:     587,
 		Host:     "smtp.gmail.com",
