@@ -24,6 +24,7 @@ type Message struct {
 	Attachments []*Attachment
 	SendTo      []string
 	CC          []string
+	BCC         []string
 	Title       string
 	Body        string
 }

@@ -129,6 +129,9 @@ func (h *goMail) listen() {
 			if len(msg.CC) > 0 {
 				m.SetHeader("Cc", msg.CC...)
 			}
+			if len(msg.BCC) > 0 {
+				m.SetHeader("Bcc", msg.BCC...)
+			}
 			m.SetHeader("Subject", msg.Title)
 			m.SetBody("text/html", msg.Body)
 
