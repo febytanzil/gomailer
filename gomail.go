@@ -124,7 +124,10 @@ func (h *goMail) listen() {
 		default:
 			msg := task.msg
 			m := gomail.NewMessage()
-			m.SetHeader("From", h.config.Email)
+			if "" == msg.From {
+				msg.From = h.config.FromEmail
+			}
+			m.SetHeader("From", msg.From)
 			m.SetHeader("To", msg.SendTo...)
 			if len(msg.CC) > 0 {
 				m.SetHeader("Cc", msg.CC...)
@@ -174,7 +177,7 @@ func (h *goMail) connect() error {
 		return nil
 	}
 
-	dialer := gomail.NewPlainDialer(h.config.Host, h.config.Port, h.config.Email, h.config.Password)
+	dialer := gomail.NewPlainDialer(h.config.Host, h.config.Port, h.config.Username, h.config.Password)
 	s, err := dialer.Dial()
 	if nil != err {
 		return err

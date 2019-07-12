@@ -29,10 +29,11 @@ func TestGoMail_Send(t *testing.T) {
 	c := &goMail{
 		sender: &gomailSenderMock{},
 		config: &Config{
-			Host:     "",
-			Port:     587,
-			Email:    "",
-			Password: "",
+			Host:      "",
+			Port:      587,
+			FromEmail: "",
+			Username:  "",
+			Password:  "",
 		},
 	}
 	err := c.Send(&Message{
@@ -49,10 +50,11 @@ func TestGoMail_Close(t *testing.T) {
 	c := &goMail{
 		sender: &gomailSenderMock{},
 		config: &Config{
-			Host:     "",
-			Port:     587,
-			Email:    "",
-			Password: "",
+			Host:      "",
+			Port:      587,
+			FromEmail: "",
+			Username:  "",
+			Password:  "",
 		},
 	}
 	err := c.Close()
@@ -65,10 +67,11 @@ func TestGoMail_SendContext(t *testing.T) {
 	c := &goMail{
 		sender: &gomailSenderMock{},
 		config: &Config{
-			Host:     "",
-			Port:     587,
-			Email:    "",
-			Password: "",
+			Host:      "",
+			Port:      587,
+			FromEmail: "",
+			Username:  "",
+			Password:  "",
 		},
 	}
 	err := c.SendContext(context.Background(), &Message{
