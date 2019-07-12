@@ -62,7 +62,7 @@ func (p *postmarkClient) Send(msg *Message) error {
 
 func (p *postmarkClient) SendContext(ctx context.Context, msg *Message) error {
 	// TODO implement ctx & worker pool
-	p.Send(msg)
+	return p.Send(msg)
 }
 
 func (p *postmarkClient) Close() error {
