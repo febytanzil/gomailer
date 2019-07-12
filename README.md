@@ -8,6 +8,7 @@ wrapper golang email with automatic reconnection
 - Avoid too many login attempts because of redial & close
 - Unit-testable/ mock-able with gomock provided
 - Support Golang context
+- Support [Postmark](https://postmarkapp.com/developer/api/overview)
 
 ## Usage
 Example is provided in `example/` folder/ package
