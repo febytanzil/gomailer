@@ -9,6 +9,7 @@ type Implementation int
 
 const (
 	Gomail = Implementation(iota)
+	Postmark
 )
 
 type Client interface {
@@ -35,19 +36,28 @@ type Attachment struct {
 }
 
 type Config struct {
-	Host     string
-	Port     int
+	Host string
+	Port int
+
+	// Email configures the sender's email
 	Email    string
 	Password string
+
+	// Postmark Settings
+	ServerToken  string
+	AccountToken string
 }
 
 var ErrClosed = errors.New("connection has been closed")
 
 // New email return email handler struct
 func NewClient(impl Implementation, emailConfig *Config) (Client, error) {
-	if Gomail == impl {
+	switch impl {
+	case Gomail:
 		return newGomail(emailConfig), nil
+	case Postmark:
+		return newPostmark(emailConfig), nil
+	default:
+		return nil, errors.New("no email implementations found")
 	}
-
-	return nil, errors.New("no email implementations found")
 }

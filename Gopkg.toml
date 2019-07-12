@@ -36,3 +36,11 @@
 [prune]
   go-tests = true
   unused-packages = true
+
+[[constraint]]
+  name = "github.com/keighl/postmark"
+  version = "1.2.0"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/hjr265/postmark.go"
