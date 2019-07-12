@@ -12,10 +12,10 @@ import (
 
 func main_ctx() {
 	c, _ := gomailer.NewClient(gomailer.Gomail, &gomailer.Config{
-		Port:     587,
-		Host:     "smtp.gmail.com",
-		Email:    "user@email.com",
-		Password: "user_password",
+		Port:      587,
+		Host:      "smtp.gmail.com",
+		FromEmail: "user@email.com",
+		Password:  "user_password",
 	})
 
 	ticker := time.NewTicker(time.Second)

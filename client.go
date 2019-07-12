@@ -22,6 +22,8 @@ type Client interface {
 }
 
 type Message struct {
+	// From overrides global sender's email
+	From        string
 	Attachments []*Attachment
 	SendTo      []string
 	CC          []string
@@ -39,8 +41,10 @@ type Config struct {
 	Host string
 	Port int
 
-	// Email configures the sender's email
-	Email    string
+	// FromEmail configures the global sender's email
+	FromEmail string
+
+	Username string
 	Password string
 
 	// Postmark Settings

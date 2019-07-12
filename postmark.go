@@ -42,8 +42,11 @@ func (p *postmarkClient) Send(msg *Message) error {
 			}
 		}
 
+		if "" == msg.From {
+			msg.From = p.config.FromEmail
+		}
 		email := postmark.Email{
-			From:        p.config.Email,
+			From:        msg.From,
 			To:          to,
 			Subject:     msg.Title,
 			HtmlBody:    msg.Body,
