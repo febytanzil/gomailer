@@ -55,6 +55,11 @@ func (h *goMail) SendContext(ctx context.Context, msg *Message) error {
 	}
 }
 
+func (h *goMail) SendAsync(msg *Message) error {
+	_, err := h.send(context.Background(), msg)
+	return err
+}
+
 func (h *goMail) Send(msg *Message) error {
 	ftr, err := h.send(context.Background(), msg)
 	if nil != err {

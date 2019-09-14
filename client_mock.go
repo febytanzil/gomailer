@@ -35,6 +35,7 @@ func (m *MockClient) EXPECT() *MockClientMockRecorder {
 
 // Send mocks base method
 func (m *MockClient) Send(msg *Message) error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Send", msg)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -42,11 +43,13 @@ func (m *MockClient) Send(msg *Message) error {
 
 // Send indicates an expected call of Send
 func (mr *MockClientMockRecorder) Send(msg interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Send", reflect.TypeOf((*MockClient)(nil).Send), msg)
 }
 
 // SendContext mocks base method
 func (m *MockClient) SendContext(ctx context.Context, msg *Message) error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SendContext", ctx, msg)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -54,11 +57,27 @@ func (m *MockClient) SendContext(ctx context.Context, msg *Message) error {
 
 // SendContext indicates an expected call of SendContext
 func (mr *MockClientMockRecorder) SendContext(ctx, msg interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendContext", reflect.TypeOf((*MockClient)(nil).SendContext), ctx, msg)
+}
+
+// SendAsync mocks base method
+func (m *MockClient) SendAsync(msg *Message) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SendAsync", msg)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SendAsync indicates an expected call of SendAsync
+func (mr *MockClientMockRecorder) SendAsync(msg interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendAsync", reflect.TypeOf((*MockClient)(nil).SendAsync), msg)
 }
 
 // Close mocks base method
 func (m *MockClient) Close() error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Close")
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -66,5 +85,6 @@ func (m *MockClient) Close() error {
 
 // Close indicates an expected call of Close
 func (mr *MockClientMockRecorder) Close() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockClient)(nil).Close))
 }
