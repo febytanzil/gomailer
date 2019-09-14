@@ -49,11 +49,15 @@ func (p *postmarkClient) Send(msg *Message) error {
 			From:        msg.From,
 			To:          to,
 			Subject:     msg.Title,
-			HtmlBody:    msg.Body,
 			TrackOpens:  true,
 			Cc:          strings.Join(msg.CC, ","),
 			Bcc:         strings.Join(msg.BCC, ","),
 			Attachments: attchs,
+		}
+		if "" == strings.TrimSpace(msg.ContentType) {
+			email.HtmlBody = msg.Body
+		} else {
+			email.TextBody = msg.Body
 		}
 		emails = append(emails, email)
 	}

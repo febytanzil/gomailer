@@ -32,6 +32,8 @@ type Message struct {
 	BCC         []string
 	Title       string
 	Body        string
+	// ContentType defaults to "text/html" if not set
+	ContentType string
 }
 
 type Attachment struct {
