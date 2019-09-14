@@ -63,6 +63,10 @@ func (p *postmarkClient) Send(msg *Message) error {
 	return err
 }
 
+func (p *postmarkClient) SendAsync(msg *Message) error {
+	return p.Send(msg)
+}
+
 func (p *postmarkClient) SendContext(ctx context.Context, msg *Message) error {
 	// TODO implement ctx & worker pool
 	return p.Send(msg)

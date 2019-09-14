@@ -17,6 +17,8 @@ type Client interface {
 	Send(msg *Message) error
 	// SendContext provide context to send function
 	SendContext(ctx context.Context, msg *Message) error
+	// SendAsync sends email asynchronously ignoring future error
+	SendAsync(msg *Message) error
 	// Close permanently close client connection
 	Close() error
 }
