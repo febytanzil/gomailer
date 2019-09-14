@@ -5,6 +5,7 @@ import (
 	"gopkg.in/gomail.v2"
 	"io"
 	"log"
+	"strings"
 	"sync"
 	"sync/atomic"
 )
@@ -136,7 +137,11 @@ func (h *goMail) listen() {
 				m.SetHeader("Bcc", msg.BCC...)
 			}
 			m.SetHeader("Subject", msg.Title)
-			m.SetBody("text/html", msg.Body)
+			if "" != strings.TrimSpace(msg.ContentType) {
+				m.SetBody(msg.ContentType, msg.Body)
+			} else {
+				m.SetBody("text/html", msg.Body)
+			}
 
 			for _, element := range msg.Attachments {
 				fileByte := element.Byte
