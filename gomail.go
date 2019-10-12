@@ -12,6 +12,7 @@ import (
 
 type goMail struct {
 	sender      gomail.SendCloser
+	dialer      *gomail.Dialer
 	config      *Config
 	isConnected int32
 	isClosed    int32
@@ -39,6 +40,7 @@ func newGomail(emailConfig *Config) *goMail {
 	return &goMail{
 		config:      emailConfig,
 		messagePool: make(chan *poolMessage),
+		dialer:      gomail.NewPlainDialer(emailConfig.Host, emailConfig.Port, emailConfig.Username, emailConfig.Password),
 	}
 }
 
@@ -156,7 +158,7 @@ func (h *goMail) listen() {
 				}))
 			}
 
-			err := gomail.Send(h.sender, m)
+			err := h.dialer.DialAndSend(m)
 
 			go func(e error, task *poolMessage) {
 				select {
@@ -169,12 +171,6 @@ func (h *goMail) listen() {
 				}
 				close(task.future)
 			}(err, task)
-
-			if err != nil {
-				h.disconnect()
-				h.connect()
-				break
-			}
 		}
 	}
 }
@@ -204,11 +200,11 @@ func (h *goMail) connect() error {
 }
 
 func (h *goMail) sendToPool(ctx context.Context, task *poolMessage) error {
-	if stateConnected != atomic.LoadInt32(&h.isConnected) {
+	/*if stateConnected != atomic.LoadInt32(&h.isConnected) {
 		if err := h.connect(); nil != err {
 			return err
 		}
-	}
+	}*/
 
 	go func(ctx context.Context) {
 		select {
