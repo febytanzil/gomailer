@@ -156,6 +156,15 @@ func (h *goMail) listen() {
 				}))
 			}
 
+			if stateConnected != atomic.LoadInt32(&h.isConnected) {
+				if err := h.connect(); nil != err {
+					task.future <- futureError{
+						err: err,
+					}
+					close(task.future)
+					continue
+				}
+			}
 			err := gomail.Send(h.sender, m)
 			if err != nil {
 				h.disconnect()
