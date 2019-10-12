@@ -11,8 +11,7 @@ import (
 )
 
 type goMail struct {
-	sender      gomail.SendCloser
-	dialer      *gomail.Dialer
+	senderPool  chan gomail.SendCloser
 	config      *Config
 	isConnected int32
 	isClosed    int32
@@ -40,7 +39,6 @@ func newGomail(emailConfig *Config) *goMail {
 	return &goMail{
 		config:      emailConfig,
 		messagePool: make(chan *poolMessage),
-		dialer:      gomail.NewPlainDialer(emailConfig.Host, emailConfig.Port, emailConfig.Username, emailConfig.Password),
 	}
 }
 
@@ -95,19 +93,8 @@ func (h *goMail) send(ctx context.Context, msg *Message) (chan futureError, erro
 	}
 }
 
-func (h *goMail) disconnect() error {
-	if h.sender == nil {
-		return nil
-	}
-	if !atomic.CompareAndSwapInt32(&h.isConnected, stateConnected, stateDisconnected) {
-		return nil
-	}
-
-	return h.sender.Close()
-}
-
 func (h *goMail) Close() error {
-	if h.sender == nil {
+	if h.senderPool == nil {
 		return nil
 	}
 	h.m.Lock()
@@ -117,60 +104,65 @@ func (h *goMail) Close() error {
 		return nil
 	}
 
-	if err := h.sender.Close(); nil != err {
-		return err
-	}
+	close(h.senderPool)
 
 	return nil
 }
 
 func (h *goMail) listen() {
-	for task := range h.messagePool {
-		select {
-		case <-task.done:
-			close(task.future)
-		default:
-			msg := task.msg
-			m := gomail.NewMessage()
-			if "" == msg.From {
-				msg.From = h.config.FromEmail
-			}
-			m.SetHeader("From", msg.From)
-			m.SetHeader("To", msg.SendTo...)
-			if len(msg.CC) > 0 {
-				m.SetHeader("Cc", msg.CC...)
-			}
-			if len(msg.BCC) > 0 {
-				m.SetHeader("Bcc", msg.BCC...)
-			}
-			m.SetHeader("Subject", msg.Title)
-			if "" != strings.TrimSpace(msg.ContentType) {
-				m.SetBody(msg.ContentType, msg.Body)
-			} else {
-				m.SetBody("text/html", msg.Body)
-			}
-
-			for _, element := range msg.Attachments {
-				fileByte := element.Byte
-				m.Attach(element.Filename, gomail.SetCopyFunc(func(w io.Writer) error {
-					_, err := w.Write(fileByte)
-					return err
-				}))
-			}
-
-			err := h.dialer.DialAndSend(m)
-
-			go func(e error, task *poolMessage) {
-				select {
-				case <-task.done:
-					log.Println("worker finished but task context was done with err", e)
-				default:
-					task.future <- futureError{
-						err: e,
-					}
-				}
+	for sender := range h.senderPool {
+		for task := range h.messagePool {
+			select {
+			case <-task.done:
 				close(task.future)
-			}(err, task)
+			default:
+				msg := task.msg
+				m := gomail.NewMessage()
+				if "" == msg.From {
+					msg.From = h.config.FromEmail
+				}
+				m.SetHeader("From", msg.From)
+				m.SetHeader("To", msg.SendTo...)
+				if len(msg.CC) > 0 {
+					m.SetHeader("Cc", msg.CC...)
+				}
+				if len(msg.BCC) > 0 {
+					m.SetHeader("Bcc", msg.BCC...)
+				}
+				m.SetHeader("Subject", msg.Title)
+				if "" != strings.TrimSpace(msg.ContentType) {
+					m.SetBody(msg.ContentType, msg.Body)
+				} else {
+					m.SetBody("text/html", msg.Body)
+				}
+
+				for _, element := range msg.Attachments {
+					fileByte := element.Byte
+					m.Attach(element.Filename, gomail.SetCopyFunc(func(w io.Writer) error {
+						_, err := w.Write(fileByte)
+						return err
+					}))
+				}
+
+				err := gomail.Send(sender, m)
+
+				go func(e error, task *poolMessage) {
+					select {
+					case <-task.done:
+						log.Println("worker finished but task context was done with err", e)
+					default:
+						task.future <- futureError{
+							err: e,
+						}
+					}
+					close(task.future)
+				}(err, task)
+
+				if nil != err {
+					h.connect()
+					break
+				}
+			}
 		}
 	}
 }
@@ -192,7 +184,9 @@ func (h *goMail) connect() error {
 		return err
 	}
 
-	h.sender = s
+	go func() {
+		h.senderPool <- s
+	}()
 	atomic.StoreInt32(&h.isConnected, stateConnected)
 	go h.listen()
 
@@ -200,11 +194,11 @@ func (h *goMail) connect() error {
 }
 
 func (h *goMail) sendToPool(ctx context.Context, task *poolMessage) error {
-	/*if stateConnected != atomic.LoadInt32(&h.isConnected) {
+	if stateConnected != atomic.LoadInt32(&h.isConnected) {
 		if err := h.connect(); nil != err {
 			return err
 		}
-	}*/
+	}
 
 	go func(ctx context.Context) {
 		select {

@@ -27,7 +27,7 @@ func (m *gomailSenderMock) Send(from string, to []string, msg io.WriterTo) error
 
 func TestGoMail_Send(t *testing.T) {
 	c := &goMail{
-		sender: &gomailSenderMock{},
+		senderPool: &gomailSenderMock{},
 		config: &Config{
 			Host:      "",
 			Port:      587,
@@ -48,7 +48,7 @@ func TestGoMail_Send(t *testing.T) {
 
 func TestGoMail_Close(t *testing.T) {
 	c := &goMail{
-		sender: &gomailSenderMock{},
+		senderPool: &gomailSenderMock{},
 		config: &Config{
 			Host:      "",
 			Port:      587,
@@ -65,7 +65,7 @@ func TestGoMail_Close(t *testing.T) {
 
 func TestGoMail_SendContext(t *testing.T) {
 	c := &goMail{
-		sender: &gomailSenderMock{},
+		senderPool: &gomailSenderMock{},
 		config: &Config{
 			Host:      "",
 			Port:      587,
