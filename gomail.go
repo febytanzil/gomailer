@@ -39,6 +39,7 @@ func newGomail(emailConfig *Config) *goMail {
 	return &goMail{
 		config:      emailConfig,
 		messagePool: make(chan *poolMessage),
+		senderPool:  make(chan gomail.SendCloser),
 	}
 }
 
@@ -94,9 +95,6 @@ func (h *goMail) send(ctx context.Context, msg *Message) (chan futureError, erro
 }
 
 func (h *goMail) Close() error {
-	if h.senderPool == nil {
-		return nil
-	}
 	h.m.Lock()
 	defer h.m.Unlock()
 
