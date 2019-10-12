@@ -11,8 +11,7 @@ import (
 )
 
 type goMail struct {
-	sender      gomail.SendCloser
-	dialer      *gomail.Dialer
+	senderPool  chan gomail.SendCloser
 	config      *Config
 	isConnected int32
 	isClosed    int32
@@ -40,7 +39,6 @@ func newGomail(emailConfig *Config) *goMail {
 	return &goMail{
 		config:      emailConfig,
 		messagePool: make(chan *poolMessage),
-		dialer:      gomail.NewPlainDialer(emailConfig.Host, emailConfig.Port, emailConfig.Username, emailConfig.Password),
 	}
 }
 
@@ -95,19 +93,8 @@ func (h *goMail) send(ctx context.Context, msg *Message) (chan futureError, erro
 	}
 }
 
-func (h *goMail) disconnect() error {
-	if h.sender == nil {
-		return nil
-	}
-	if !atomic.CompareAndSwapInt32(&h.isConnected, stateConnected, stateDisconnected) {
-		return nil
-	}
-
-	return h.sender.Close()
-}
-
 func (h *goMail) Close() error {
-	if h.sender == nil {
+	if h.senderPool == nil {
 		return nil
 	}
 	h.m.Lock()
@@ -117,14 +104,14 @@ func (h *goMail) Close() error {
 		return nil
 	}
 
-	if err := h.sender.Close(); nil != err {
-		return err
-	}
+	close(h.senderPool)
 
 	return nil
 }
 
 func (h *goMail) listen() {
+	sender := <-h.senderPool
+
 	for task := range h.messagePool {
 		select {
 		case <-task.done:
@@ -158,7 +145,7 @@ func (h *goMail) listen() {
 				}))
 			}
 
-			err := h.dialer.DialAndSend(m)
+			err := gomail.Send(sender, m)
 
 			go func(e error, task *poolMessage) {
 				select {
@@ -171,6 +158,11 @@ func (h *goMail) listen() {
 				}
 				close(task.future)
 			}(err, task)
+
+			if nil != err {
+				h.connect()
+				return
+			}
 		}
 	}
 }
@@ -192,7 +184,9 @@ func (h *goMail) connect() error {
 		return err
 	}
 
-	h.sender = s
+	go func() {
+		h.senderPool <- s
+	}()
 	atomic.StoreInt32(&h.isConnected, stateConnected)
 	go h.listen()
 
@@ -200,11 +194,11 @@ func (h *goMail) connect() error {
 }
 
 func (h *goMail) sendToPool(ctx context.Context, task *poolMessage) error {
-	/*if stateConnected != atomic.LoadInt32(&h.isConnected) {
+	if stateConnected != atomic.LoadInt32(&h.isConnected) {
 		if err := h.connect(); nil != err {
 			return err
 		}
-	}*/
+	}
 
 	go func(ctx context.Context) {
 		select {

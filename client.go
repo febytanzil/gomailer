@@ -24,7 +24,7 @@ type Client interface {
 }
 
 type Message struct {
-	// From overrides global sender's email
+	// From overrides global senderPool's email
 	From        string
 	Attachments []*Attachment
 	SendTo      []string
@@ -45,7 +45,7 @@ type Config struct {
 	Host string
 	Port int
 
-	// FromEmail configures the global sender's email
+	// FromEmail configures the global senderPool's email
 	FromEmail string
 
 	Username string
