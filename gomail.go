@@ -110,58 +110,58 @@ func (h *goMail) Close() error {
 }
 
 func (h *goMail) listen() {
-	for sender := range h.senderPool {
-		for task := range h.messagePool {
-			select {
-			case <-task.done:
-				close(task.future)
-			default:
-				msg := task.msg
-				m := gomail.NewMessage()
-				if "" == msg.From {
-					msg.From = h.config.FromEmail
-				}
-				m.SetHeader("From", msg.From)
-				m.SetHeader("To", msg.SendTo...)
-				if len(msg.CC) > 0 {
-					m.SetHeader("Cc", msg.CC...)
-				}
-				if len(msg.BCC) > 0 {
-					m.SetHeader("Bcc", msg.BCC...)
-				}
-				m.SetHeader("Subject", msg.Title)
-				if "" != strings.TrimSpace(msg.ContentType) {
-					m.SetBody(msg.ContentType, msg.Body)
-				} else {
-					m.SetBody("text/html", msg.Body)
-				}
+	sender := <-h.senderPool
 
-				for _, element := range msg.Attachments {
-					fileByte := element.Byte
-					m.Attach(element.Filename, gomail.SetCopyFunc(func(w io.Writer) error {
-						_, err := w.Write(fileByte)
-						return err
-					}))
-				}
+	for task := range h.messagePool {
+		select {
+		case <-task.done:
+			close(task.future)
+		default:
+			msg := task.msg
+			m := gomail.NewMessage()
+			if "" == msg.From {
+				msg.From = h.config.FromEmail
+			}
+			m.SetHeader("From", msg.From)
+			m.SetHeader("To", msg.SendTo...)
+			if len(msg.CC) > 0 {
+				m.SetHeader("Cc", msg.CC...)
+			}
+			if len(msg.BCC) > 0 {
+				m.SetHeader("Bcc", msg.BCC...)
+			}
+			m.SetHeader("Subject", msg.Title)
+			if "" != strings.TrimSpace(msg.ContentType) {
+				m.SetBody(msg.ContentType, msg.Body)
+			} else {
+				m.SetBody("text/html", msg.Body)
+			}
 
-				err := gomail.Send(sender, m)
+			for _, element := range msg.Attachments {
+				fileByte := element.Byte
+				m.Attach(element.Filename, gomail.SetCopyFunc(func(w io.Writer) error {
+					_, err := w.Write(fileByte)
+					return err
+				}))
+			}
 
-				go func(e error, task *poolMessage) {
-					select {
-					case <-task.done:
-						log.Println("worker finished but task context was done with err", e)
-					default:
-						task.future <- futureError{
-							err: e,
-						}
+			err := gomail.Send(sender, m)
+
+			go func(e error, task *poolMessage) {
+				select {
+				case <-task.done:
+					log.Println("worker finished but task context was done with err", e)
+				default:
+					task.future <- futureError{
+						err: e,
 					}
-					close(task.future)
-				}(err, task)
-
-				if nil != err {
-					h.connect()
-					break
 				}
+				close(task.future)
+			}(err, task)
+
+			if nil != err {
+				h.connect()
+				return
 			}
 		}
 	}
