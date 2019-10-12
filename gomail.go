@@ -160,11 +160,23 @@ func (h *goMail) listen() {
 			}(err, task)
 
 			if nil != err {
+				h.disconnect(sender)
 				h.connect()
 				return
 			}
 		}
 	}
+}
+
+func (h *goMail) disconnect(sender gomail.SendCloser) error {
+	if nil == sender {
+		return nil
+	}
+	if !atomic.CompareAndSwapInt32(&h.isConnected, stateConnected, stateDisconnected) {
+		return nil
+	}
+
+	return sender.Close()
 }
 
 func (h *goMail) connect() error {
