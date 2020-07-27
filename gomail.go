@@ -36,11 +36,15 @@ const (
 )
 
 func newGomail(emailConfig *Config) *goMail {
-	return &goMail{
+	i := &goMail{
 		config:      emailConfig,
 		messagePool: make(chan *poolMessage),
 		senderPool:  make(chan gomail.SendCloser),
 	}
+
+	go i.listen()
+
+	return i
 }
 
 func (h *goMail) SendContext(ctx context.Context, msg *Message) error {
@@ -108,59 +112,68 @@ func (h *goMail) Close() error {
 }
 
 func (h *goMail) listen() {
-	sender := <-h.senderPool
+	for {
+		sender := <-h.senderPool
+		errConnect := false
 
-	for task := range h.messagePool {
-		select {
-		case <-task.done:
-			close(task.future)
-		default:
-			msg := task.msg
-			m := gomail.NewMessage()
-			if "" == msg.From {
-				msg.From = h.config.FromEmail
-			}
-			m.SetHeader("From", msg.From)
-			m.SetHeader("To", msg.SendTo...)
-			if len(msg.CC) > 0 {
-				m.SetHeader("Cc", msg.CC...)
-			}
-			if len(msg.BCC) > 0 {
-				m.SetHeader("Bcc", msg.BCC...)
-			}
-			m.SetHeader("Subject", msg.Title)
-			if "" != strings.TrimSpace(msg.ContentType) {
-				m.SetBody(msg.ContentType, msg.Body)
-			} else {
-				m.SetBody("text/html", msg.Body)
-			}
-
-			for _, element := range msg.Attachments {
-				fileByte := element.Byte
-				m.Attach(element.Filename, gomail.SetCopyFunc(func(w io.Writer) error {
-					_, err := w.Write(fileByte)
-					return err
-				}))
-			}
-
-			err := gomail.Send(sender, m)
-
-			go func(e error, task *poolMessage) {
-				select {
-				case <-task.done:
-					log.Println("worker finished but task context was done with err", e)
-				default:
-					task.future <- futureError{
-						err: e,
-					}
-				}
+		for task := range h.messagePool {
+			select {
+			case <-task.done:
 				close(task.future)
-			}(err, task)
+			default:
+				msg := task.msg
+				m := gomail.NewMessage()
+				if "" == msg.From {
+					msg.From = h.config.FromEmail
+				}
+				m.SetHeader("From", msg.From)
+				m.SetHeader("To", msg.SendTo...)
+				if len(msg.CC) > 0 {
+					m.SetHeader("Cc", msg.CC...)
+				}
+				if len(msg.BCC) > 0 {
+					m.SetHeader("Bcc", msg.BCC...)
+				}
+				m.SetHeader("Subject", msg.Title)
+				if "" != strings.TrimSpace(msg.ContentType) {
+					m.SetBody(msg.ContentType, msg.Body)
+				} else {
+					m.SetBody("text/html", msg.Body)
+				}
 
-			if nil != err {
-				h.disconnect(sender)
-				h.connect()
-				return
+				for _, element := range msg.Attachments {
+					fileByte := element.Byte
+					m.Attach(element.Filename, gomail.SetCopyFunc(func(w io.Writer) error {
+						_, err := w.Write(fileByte)
+						return err
+					}))
+				}
+
+				err := gomail.Send(sender, m)
+
+				go func(e error, task *poolMessage) {
+					select {
+					case <-task.done:
+						log.Println("worker finished but task context was done with err", e)
+					default:
+						task.future <- futureError{
+							err: e,
+						}
+					}
+					close(task.future)
+				}(err, task)
+
+				if nil != err {
+					h.disconnect(sender)
+					h.connect()
+					errConnect = true
+					break
+				}
+			}
+
+			if errConnect {
+				errConnect = false
+				break
 			}
 		}
 	}
@@ -188,7 +201,7 @@ func (h *goMail) connect() error {
 		return nil
 	}
 
-	dialer := gomail.NewPlainDialer(h.config.Host, h.config.Port, h.config.Username, h.config.Password)
+	dialer := gomail.NewDialer(h.config.Host, h.config.Port, h.config.Username, h.config.Password)
 	s, err := dialer.Dial()
 	if nil != err {
 		return err
@@ -198,7 +211,6 @@ func (h *goMail) connect() error {
 		h.senderPool <- s
 	}()
 	atomic.StoreInt32(&h.isConnected, stateConnected)
-	go h.listen()
 
 	return nil
 }
