@@ -201,7 +201,7 @@ func (h *goMail) connect() error {
 		return nil
 	}
 
-	dialer := gomail.NewDialer(h.config.Host, h.config.Port, h.config.Username, h.config.Password)
+	dialer := gomail.NewPlainDialer(h.config.Host, h.config.Port, h.config.Username, h.config.Password)
 	s, err := dialer.Dial()
 	if nil != err {
 		return err
