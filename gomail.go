@@ -173,7 +173,6 @@ func (h *goMail) listen() {
 						log.Println("connect error:", errConn)
 					}
 					pollNewConn = true
-					break
 				}
 			}
 
