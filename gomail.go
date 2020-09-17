@@ -114,7 +114,7 @@ func (h *goMail) Close() error {
 func (h *goMail) listen() {
 	for {
 		sender := <-h.senderPool
-		errConnect := false
+		pollNewConn := false
 
 		for task := range h.messagePool {
 			select {
@@ -164,15 +164,19 @@ func (h *goMail) listen() {
 				}(err, task)
 
 				if nil != err {
-					h.disconnect(sender)
-					h.connect()
-					errConnect = true
-					break
+					errConn := h.disconnect(sender)
+					if nil != errConn {
+						log.Println("disconnect error:", errConn)
+					}
+					errConn = h.connect()
+					if nil != errConn {
+						log.Println("connect error:", errConn)
+					}
+					pollNewConn = true
 				}
 			}
 
-			if errConnect {
-				errConnect = false
+			if pollNewConn {
 				break
 			}
 		}
